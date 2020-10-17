@@ -1,0 +1,19 @@
+version = 2
+root = "/opt/containerd/root"
+state = "/run/user/1001/containerd"
+disabled_plugins = ["io.containerd.content.v1.content"]
+
+[grpc]
+  address = "/run/user/1001/containerd/containerd.sock"
+  uid = 0
+  gid = 1001
+
+[proxy_plugins]
+  [proxy_plugins.contentd]
+    type = "content"
+    address = "/run/user/1001/contentd/contentd.sock"
+
+[plugins."io.containerd.grpc.v1.cri"]
+  disable_cgroup = true
+  disable_apparmor = true
+  restrict_oom_score_adj = true
