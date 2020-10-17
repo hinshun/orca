@@ -1,20 +1,20 @@
-package ipcs
+package contentd
 
 import (
 	"context"
 	"crypto/rand"
 	"fmt"
 
-	crypto "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/ipfs/interface-go-ipfs-core/options"
+	crypto "github.com/libp2p/go-libp2p-core/crypto"
 )
-
-type keystoreServer struct {
-	p *Peer
-}
 
 func (p *Peer) Keystore() KeystoreServer {
 	return &keystoreServer{p}
+}
+
+type keystoreServer struct {
+	p *Peer
 }
 
 func (k *keystoreServer) Add(ctx context.Context, req *AddRequest) (*AddResponse, error) {

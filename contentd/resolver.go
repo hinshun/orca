@@ -1,10 +1,10 @@
-package ipcs
+package contentd
 
 import (
 	"context"
 
 	"github.com/containerd/containerd/api/types"
-	"github.com/hinshun/ipcs/pkg/digestconv"
+	"github.com/hinshun/orca/pkg/digestconv"
 	corepath "github.com/ipfs/interface-go-ipfs-core/path"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )

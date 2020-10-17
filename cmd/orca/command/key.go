@@ -1,6 +1,8 @@
 package command
 
 import (
+	"github.com/hinshun/orca/contentd"
+	"github.com/pkg/errors"
 	cli "github.com/urfave/cli/v2"
 )
 
@@ -20,6 +22,11 @@ var keyGenCommand = &cli.Command{
 	ArgsUsage: "<name>",
 	Flags:     []cli.Flag{},
 	Action: func(c *cli.Context) error {
+		_, err := contentd.NewClient(c.String("contentd-address"))
+		if err != nil {
+			return errors.Wrap(err, "failed to create contentd client")
+		}
+
 		return nil
 	},
 }

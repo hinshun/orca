@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/Netflix/p2plab/pkg/digestconv"
-	"github.com/hinshun/ipcs"
+	"github.com/hinshun/orca/contentd"
 )
 
 func main() {
@@ -19,7 +19,7 @@ func main() {
 
 func run(args []string) error {
 	ctx := context.Background()
-	cln, err := ipcs.NewClient("/run/user/1001/contentd/contentd.sock")
+	cln, err := contentd.NewClient("/run/user/1001/contentd/contentd.sock")
 	if err != nil {
 		return err
 	}

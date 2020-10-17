@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hinshun/ipcs/pkg/digestconv"
+	"github.com/hinshun/orca/pkg/digestconv"
 	digest "github.com/opencontainers/go-digest"
 )
 

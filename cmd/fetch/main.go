@@ -10,7 +10,7 @@ import (
 	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/platforms"
 	"github.com/containerd/containerd/remotes/docker"
-	"github.com/hinshun/ipcs"
+	"github.com/hinshun/orca/contentd"
 	digest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
@@ -45,7 +45,7 @@ func run(args []string) error {
 		return errors.Wrap(err, "")
 	}
 
-	mfst, err := images.Manifest(ctx, ipcs.FromFetcher(fetcher), desc, platforms.Default())
+	mfst, err := images.Manifest(ctx, contentd.FromFetcher(fetcher), desc, platforms.Default())
 	if err != nil {
 		return errors.Wrap(err, "")
 	}

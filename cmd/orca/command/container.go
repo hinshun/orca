@@ -16,7 +16,7 @@ import (
 	"github.com/containerd/containerd/oci"
 	"github.com/containerd/containerd/platforms"
 	"github.com/containerd/containerd/remotes"
-	"github.com/hinshun/ipcs"
+	"github.com/hinshun/orca/contentd"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/pkg/errors"
 	cli "github.com/urfave/cli/v2"
@@ -161,7 +161,7 @@ var containerRunCommand = &cli.Command{
 				return errors.Wrap(err, "failed to get image")
 			}
 
-			contentdCln, err := ipcs.NewClient(c.String("contentd-address"))
+			contentdCln, err := contentd.NewClient(c.String("contentd-address"))
 			if err != nil {
 				return errors.Wrap(err, "failed to create contentd client")
 			}
@@ -191,7 +191,7 @@ var containerRunCommand = &cli.Command{
 			s     specs.Spec
 		)
 
-		id := "josh"
+		id := "hello"
 
 		opts = append(opts,
 			oci.WithDefaultSpec(),
@@ -285,7 +285,7 @@ var containerRunCommand = &cli.Command{
 	},
 }
 
-func PullImage(ctx context.Context, contentdCln *ipcs.Client, containerdCln *containerd.Client, ref string) (img images.Image, err error) {
+func PullImage(ctx context.Context, contentdCln *contentd.Client, containerdCln *containerd.Client, ref string) (img images.Image, err error) {
 	var (
 		store    = containerdCln.ContentStore()
 		resolver = contentdCln.Resolver()

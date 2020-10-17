@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/hinshun/ipcs"
+	"github.com/hinshun/orca/contentd"
 )
 
 func main() {
@@ -19,7 +19,7 @@ func main() {
 
 func run(args []string) error {
 	ctx := context.Background()
-	p, err := ipcs.New(ctx, "/ip4/0.0.0.0/udp/0/quic", "/run/user/1001/contentd")
+	p, err := contentd.New(ctx, "/ip4/0.0.0.0/udp/0/quic", "/run/user/1001/contentd")
 	if err != nil {
 		return err
 	}

@@ -1,4 +1,4 @@
-package ipcs
+package contentd
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 
 	"github.com/containerd/containerd/content"
 	"github.com/containerd/containerd/remotes"
-	"github.com/hinshun/ipcs/pkg/digestconv"
+	"github.com/hinshun/orca/pkg/digestconv"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 )

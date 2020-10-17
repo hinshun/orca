@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hinshun/ipcs"
+	"github.com/hinshun/orca/contentd"
 )
 
 func main() {
@@ -23,7 +23,7 @@ func run(ctx context.Context, addr, root string) error {
 		return err
 	}
 
-	p, err := ipcs.New(ctx, addr, root)
+	p, err := contentd.New(ctx, addr, root)
 	if err != nil {
 		return err
 	}

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hinshun/ipcs/cmd/orca/command"
+	"github.com/hinshun/orca/cmd/orca/command"
 )
 
 func main() {

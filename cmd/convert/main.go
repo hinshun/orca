@@ -13,7 +13,7 @@ import (
 	"github.com/containerd/containerd/platforms"
 	"github.com/containerd/containerd/remotes/docker"
 	"github.com/docker/distribution/reference"
-	"github.com/hinshun/ipcs"
+	"github.com/hinshun/orca/contentd"
 	"github.com/pkg/errors"
 )
 
@@ -22,7 +22,7 @@ func main() {
 		log.Fatal("convert: requires exactly 1 arg")
 	}
 
-	ctx := namespaces.WithNamespace(context.Background(), "ipcs")
+	ctx := namespaces.WithNamespace(context.Background(), "orca")
 	err := run(ctx, os.Args[1])
 	if err != nil {
 		log.Fatal(err)
@@ -66,7 +66,7 @@ func Convert(ctx context.Context, cln *containerd.Client, ref string) error {
 		return errors.Wrapf(err, "failed to create fetcher for %q", name)
 	}
 
-	converter := ipcs.NewConverter(cln.ContentStore(), ipcs.FromFetcher(fetcher))
+	converter := contentd.NewConverter(cln.ContentStore(), contentd.FromFetcher(fetcher))
 	mfstDesc, err := converter.Convert(ctx, desc)
 	if err != nil {
 		return errors.Wrapf(err, "failed to convert %q to ipfs manifest", name)

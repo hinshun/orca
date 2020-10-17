@@ -5,7 +5,7 @@ package contentd.services.resolver.v1;
 import weak "gogoproto/gogo.proto";
 import "github.com/containerd/containerd/api/types/descriptor.proto";
 
-option go_package = "github.com/hinshun/ipcs";
+option go_package = "github.com/hinshun/orca/contentd";
 
 service Resolver {
 	rpc Resolve(ResolveRequest) returns (ResolveResponse);

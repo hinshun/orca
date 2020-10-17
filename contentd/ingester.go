@@ -1,4 +1,4 @@
-package ipcs
+package contentd
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 
 	"github.com/containerd/containerd/content"
 	"github.com/containerd/containerd/errdefs"
-	"github.com/hinshun/ipcs/pkg/digestconv"
+	"github.com/hinshun/orca/pkg/digestconv"
 	digest "github.com/opencontainers/go-digest"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"

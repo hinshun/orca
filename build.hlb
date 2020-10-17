@@ -72,7 +72,7 @@ fs _protobuild(fs src) {
 		go install ./cmd/protoc-gen-gogocontentd &&
 		go list ./... | grep -v vendor | xargs protobuild
 	PROTO with option {
-		dir "/go/src/github.com/hinshun/ipcs"
-		mount src "/go/src/github.com/hinshun/ipcs" as protobuild
+		dir "/go/src/github.com/hinshun/orca"
+		mount src "/go/src/github.com/hinshun/orca" as protobuild
 	}
 }

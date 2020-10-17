@@ -1,4 +1,4 @@
-package ipcs
+package contentd
 
 import (
 	"context"

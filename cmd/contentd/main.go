@@ -8,7 +8,7 @@ import (
 
 	contentapi "github.com/containerd/containerd/api/services/content/v1"
 	"github.com/containerd/containerd/services/content/contentserver"
-	"github.com/hinshun/ipcs"
+	"github.com/hinshun/orca/contentd"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )
@@ -27,9 +27,9 @@ func main() {
 }
 
 func run(args []string) error {
-	p, err := ipcs.New(context.Background(), args[0], args[1])
+	p, err := contentd.New(context.Background(), args[0], args[1])
 	if err != nil {
-		return errors.Wrap(err, "failed to create ipcs content store")
+		return errors.Wrap(err, "failed to create content store")
 	}
 
 	// Convert the content store to a gRPC service.
@@ -42,7 +42,7 @@ func run(args []string) error {
 	contentapi.RegisterContentServer(rpc, service)
 
 	// Register the peer's resolver service with the gRPC server.
-	ipcs.RegisterResolverServer(rpc, p)
+	contentd.RegisterResolverServer(rpc, p)
 
 	// Listen and serve.
 	os.Remove(args[2])

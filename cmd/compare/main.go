@@ -14,8 +14,8 @@ import (
 	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/platforms"
 	"github.com/containerd/containerd/remotes/docker"
-	"github.com/hinshun/ipcs"
-	"github.com/hinshun/ipcs/pkg/digestconv"
+	"github.com/hinshun/orca/contentd"
+	"github.com/hinshun/orca/pkg/digestconv"
 	cid "github.com/ipfs/go-cid"
 	httpapi "github.com/ipfs/go-ipfs-http-client"
 	merkledag "github.com/ipfs/go-merkledag"
@@ -25,7 +25,7 @@ import (
 )
 
 func main() {
-	ctx := namespaces.WithNamespace(context.Background(), "ipcs")
+	ctx := namespaces.WithNamespace(context.Background(), "orca")
 	err := run(ctx, os.Args[1:]...)
 	if err != nil {
 		log.Fatal(err)
@@ -105,7 +105,7 @@ func ConvertManifest(ctx context.Context, ipfsCln iface.CoreAPI, ctrdCln *contai
 		return ocispec.Descriptor{}, errors.Wrapf(err, "failed to create fetcher for %q", srcName)
 	}
 
-	converter := ipcs.NewConverter(ipfsCln, ipcs.FromFetcher(fetcher))
+	converter := contentd.NewConverter(ipfsCln, contentd.FromFetcher(fetcher))
 	dstDesc, err := converter.Convert(ctx, srcDesc)
 	if err != nil {
 		return ocispec.Descriptor{}, errors.Wrapf(err, "failed to convert %q to ipfs manifest", srcName)
@@ -120,7 +120,7 @@ type BlockParent struct {
 }
 
 func CompareManifestBlocks(ctx context.Context, ipfsCln iface.CoreAPI, blockParentByCid map[string]*BlockParent, ref string, desc ocispec.Descriptor) error {
-	store, err := ipcs.New(ctx, "/ip4/0.0.0.0/udp/0/quic", "/run/user/1001/contentd")
+	store, err := contentd.New(ctx, "/ip4/0.0.0.0/udp/0/quic", "/run/user/1001/contentd")
 	if err != nil {
 		return err
 	}
