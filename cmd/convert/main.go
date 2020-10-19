@@ -13,6 +13,7 @@ import (
 	"github.com/containerd/containerd/platforms"
 	"github.com/containerd/containerd/remotes/docker"
 	"github.com/docker/distribution/reference"
+	"github.com/hinshun/orca/pkg/digestconv"
 	"github.com/hinshun/orca/contentd"
 	"github.com/pkg/errors"
 )
@@ -71,7 +72,13 @@ func Convert(ctx context.Context, cln *containerd.Client, ref string) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to convert %q to ipfs manifest", name)
 	}
-	log.Printf("Successfully converted manifest %s", mfstDesc.Digest)
+
+	c, err := digestconv.DigestToCid(mfstDesc.Digest)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("Successfully converted manifest %s [%s]", mfstDesc.Digest, c)
 
 	img := images.Image{
 		Name:   "/ipns/highlevel.build/alpine",

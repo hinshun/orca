@@ -43,6 +43,7 @@ func run(args []string) error {
 
 	// Register the peer's resolver service with the gRPC server.
 	contentd.RegisterResolverServer(rpc, p)
+	contentd.RegisterKeystoreServer(rpc, p.Keystore())
 
 	// Listen and serve.
 	os.Remove(args[2])

@@ -34,11 +34,14 @@ func App() *cli.App {
 	}
 
 	app.Commands = []*cli.Command{
-		podCommand,
+		// podCommand,
 		containerCommand,
 		imageCommand,
 		contentCommand,
 		keyCommand,
+
+		containerRunCommand,
+		containerExecCommand,
 	}
 
 	return app
@@ -47,13 +50,15 @@ func App() *cli.App {
 var podCommand = &cli.Command{
 	Name:        "pod",
 	Usage:       "Manage pods",
+	Category:    "manage",
 	Subcommands: []*cli.Command{},
 }
 
 var containerCommand = &cli.Command{
-	Name:    "container",
-	Aliases: []string{"ctr"},
-	Usage:   "Manage containers",
+	Name:     "container",
+	Aliases:  []string{"ctr"},
+	Usage:    "Manage containers",
+	Category: "manage",
 	Subcommands: []*cli.Command{
 		containerExecCommand,
 		containerLogsCommand,
@@ -64,9 +69,10 @@ var containerCommand = &cli.Command{
 }
 
 var imageCommand = &cli.Command{
-	Name:    "image",
-	Aliases: []string{"img"},
-	Usage:   "Manage images",
+	Name:     "image",
+	Aliases:  []string{"img"},
+	Usage:    "Manage images",
+	Category: "manage",
 	Subcommands: []*cli.Command{
 		imageListCommand,
 		imagePullCommand,
@@ -75,8 +81,9 @@ var imageCommand = &cli.Command{
 }
 
 var contentCommand = &cli.Command{
-	Name:  "content",
-	Usage: "Manage content",
+	Name:     "content",
+	Usage:    "Manage content",
+	Category: "manage",
 	Subcommands: []*cli.Command{
 		contentCatCommand,
 		contentListCommand,
@@ -85,8 +92,9 @@ var contentCommand = &cli.Command{
 }
 
 var keyCommand = &cli.Command{
-	Name:  "key",
-	Usage: "Manage keys",
+	Name:     "key",
+	Usage:    "Manage keys",
+	Category: "manage",
 	Subcommands: []*cli.Command{
 		keyAddCommand,
 		keyGenCommand,

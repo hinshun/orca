@@ -3,7 +3,9 @@ package command
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
+	"os"
 	"syscall"
 
 	"github.com/containerd/console"
@@ -26,8 +28,120 @@ var containerExecCommand = &cli.Command{
 	Name:      "exec",
 	Usage:     "Run a command in a running container",
 	ArgsUsage: "<container> <command> [arg...]",
-	Flags:     []cli.Flag{},
+	Flags: []cli.Flag{
+		&cli.BoolFlag{
+			Name:    "tty",
+			Aliases: []string{"t"},
+			Usage:   "allocate a tty",
+		},
+		&cli.BoolFlag{
+			Name:    "detach",
+			Aliases: []string{"d"},
+			Usage:   "detach from the process after it has started execution",
+		},
+	},
 	Action: func(c *cli.Context) error {
+		var (
+			id     = c.Args().First()
+			args   = c.Args().Tail()
+			tty    = c.Bool("tty")
+			detach = c.Bool("detach")
+		)
+
+		cln, ctx, cancel, err := NewClient(c)
+		if err != nil {
+			return err
+		}
+		defer cancel()
+
+		container, err := cln.LoadContainer(ctx, id)
+		if err != nil {
+			return err
+		}
+
+		spec, err := container.Spec(ctx)
+		if err != nil {
+			return err
+		}
+
+		task, err := container.Task(ctx, nil)
+		if err != nil {
+			return err
+		}
+
+		pspec := spec.Process
+		pspec.Terminal = tty
+		pspec.Args = args
+
+		var (
+			ioCreator cio.Creator
+			stdinC    = &stdinCloser{
+				stdin: os.Stdin,
+			}
+		)
+
+		cioOpts := []cio.Opt{
+			cio.WithStreams(stdinC, os.Stdout, os.Stderr),
+			cio.WithFIFODir("/tmp/fifo-dir"),
+		}
+		if tty {
+			cioOpts = append(cioOpts, cio.WithTerminal)
+		}
+		ioCreator = cio.NewCreator(cioOpts...)
+
+		execId := "deadbeef"
+		process, err := task.Exec(ctx, execId, pspec, ioCreator)
+		if err != nil {
+			return err
+		}
+		stdinC.closer = func() {
+			process.CloseIO(ctx, containerd.WithStdinCloser)
+		}
+		if !detach {
+			defer process.Delete(ctx)
+		}
+
+		statusC, err := process.Wait(ctx)
+		if err != nil {
+			return err
+		}
+
+		var con console.Console
+		if tty {
+			con = console.Current()
+			defer con.Reset()
+			if err := con.SetRaw(); err != nil {
+				return err
+			}
+		}
+		if !detach {
+			if tty {
+				err = tasks.HandleConsoleResize(ctx, process, con)
+				if err != nil {
+					log.Printf("console resize err: %s", err)
+				}
+			} else {
+				sigc := commands.ForwardAllSignals(ctx, process)
+				defer commands.StopCatch(sigc)
+			}
+		}
+
+		err = process.Start(ctx)
+		if err != nil {
+			return err
+		}
+		if detach {
+			return nil
+		}
+
+		status := <-statusC
+		code, _, err := status.Result()
+		if err != nil {
+			return err
+		}
+		if code != 0 {
+			return cli.NewExitError("", int(code))
+		}
 		return nil
 	},
 }
@@ -137,15 +251,28 @@ var containerRunCommand = &cli.Command{
 			Aliases: []string{"d"},
 			Usage:   "run container in background and print container ID",
 		},
+		&cli.StringFlag{
+			Name:  "name",
+			Usage: "Assign a name to the container",
+		},
 	},
 	Action: func(c *cli.Context) error {
 		if c.NArg() < 1 {
 			return errors.Errorf("must specify an image")
 		}
 
-		var args []string
-		if c.NArg() > 1 {
-			args = c.Args().Slice()[1:]
+		var (
+			ref    = c.Args().First()
+			args   = c.Args().Tail()
+			rm     = c.Bool("rm")
+			tty    = c.Bool("tty")
+			detach = c.Bool("detach")
+			id     = c.String("name")
+		)
+
+		if id == "" {
+			// todo: generate id
+			id = "hello"
 		}
 
 		cln, ctx, cancel, err := NewClient(c)
@@ -154,7 +281,6 @@ var containerRunCommand = &cli.Command{
 		}
 		defer cancel()
 
-		ref := c.Args().First()
 		img, err := cln.GetImage(ctx, ref)
 		if err != nil {
 			if !errdefs.IsNotFound(err) {
@@ -191,15 +317,13 @@ var containerRunCommand = &cli.Command{
 			s     specs.Spec
 		)
 
-		id := "hello"
-
 		opts = append(opts,
 			oci.WithDefaultSpec(),
 			oci.WithDefaultUnixDevices,
 			oci.WithImageConfigArgs(img, args),
 			oci.WithCgroup(""),
 		)
-		if c.Bool("tty") {
+		if tty {
 			opts = append(opts, oci.WithTTY)
 		}
 
@@ -216,12 +340,12 @@ var containerRunCommand = &cli.Command{
 			return errors.Wrap(err, "failed to create container")
 		}
 
-		if c.Bool("rm") {
+		if rm {
 			defer container.Delete(ctx)
 		}
 
 		var con console.Console
-		if c.Bool("tty") {
+		if tty {
 			con = console.Current()
 			defer con.Reset()
 
@@ -241,7 +365,7 @@ var containerRunCommand = &cli.Command{
 		}
 
 		var statusC <-chan containerd.ExitStatus
-		if !c.Bool("detach") {
+		if !detach {
 			defer task.Delete(ctx)
 			statusC, err = task.Wait(ctx)
 			if err != nil {
@@ -253,12 +377,12 @@ var containerRunCommand = &cli.Command{
 		if err != nil {
 			return err
 		}
-		if c.Bool("detach") {
+		if detach {
 			fmt.Println(id)
 			return nil
 		}
 
-		if c.Bool("tty") {
+		if tty {
 			err = tasks.HandleConsoleResize(ctx, task, con)
 			if err != nil {
 				log.Printf("console resize err: %s", err)
@@ -347,4 +471,19 @@ func PullImage(ctx context.Context, contentdCln *contentd.Client, containerdCln 
 		}
 		return created, nil
 	}
+}
+
+type stdinCloser struct {
+	stdin  *os.File
+	closer func()
+}
+
+func (s *stdinCloser) Read(p []byte) (int, error) {
+	n, err := s.stdin.Read(p)
+	if err == io.EOF {
+		if s.closer != nil {
+			s.closer()
+		}
+	}
+	return n, err
 }
