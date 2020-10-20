@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"time"
 
@@ -269,6 +270,13 @@ func (p *Peer) Add(ctx context.Context, r io.Reader) (ipld.Node, error) {
 
 func (p *Peer) Get(ctx context.Context, ref string) (ipld.Node, error) {
 	cpath := corepath.New(ref)
+	if cpath.Namespace() == "" {
+		_, err := cid.Parse(ref)
+		if err != nil {
+			cpath = corepath.New(path.Join("/ipns", cpath.String()))
+		}
+	}
+
 	ipath := ipfspath.Path(cpath.String())
 	ipath, err := resolve.ResolveIPNS(ctx, p.namesys, ipath)
 	if err != nil {

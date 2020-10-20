@@ -10,6 +10,11 @@ func App() *cli.App {
 	app.Usage = "cli for container management"
 
 	app.Flags = []cli.Flag{
+		&cli.BoolFlag{
+			Name:    "rootless",
+			EnvVars: []string{"ORCA_CONTAINERD_ROOTLESS"},
+			Usage:   "containerd is running rootless",
+		},
 		&cli.StringFlag{
 			Name:    "containerd-address",
 			Aliases: []string{"ctrd-addr"},
@@ -33,6 +38,15 @@ func App() *cli.App {
 		},
 	}
 
+	runCommand := *containerRunCommand
+	runCommand.Category = "shortcut"
+
+	execCommand := *containerExecCommand
+	execCommand.Category = "shortcut"
+
+	pullCommand := *imagePullCommand
+	pullCommand.Category = "shortcut"
+
 	app.Commands = []*cli.Command{
 		// podCommand,
 		containerCommand,
@@ -40,8 +54,9 @@ func App() *cli.App {
 		contentCommand,
 		keyCommand,
 
-		containerRunCommand,
-		containerExecCommand,
+		&runCommand,
+		&execCommand,
+		&pullCommand,
 	}
 
 	return app

@@ -2,7 +2,13 @@ package command
 
 import (
 	"fmt"
+	"io"
+	"os"
 
+	"github.com/containerd/containerd/content"
+	"github.com/containerd/containerd/errdefs"
+	digest "github.com/opencontainers/go-digest"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	cli "github.com/urfave/cli/v2"
 )
 
@@ -12,7 +18,25 @@ var contentCatCommand = &cli.Command{
 	ArgsUsage: "<digest>",
 	Flags:     []cli.Flag{},
 	Action: func(c *cli.Context) error {
-		return nil
+		cln, ctx, cancel, err := NewClient(c)
+		if err != nil {
+			return err
+		}
+		defer cancel()
+
+		dgst, err := digest.Parse(c.Args().First())
+		if err != nil {
+			return err
+		}
+
+		ra, err := cln.ContentStore().ReaderAt(ctx, ocispec.Descriptor{Digest: dgst})
+		if err != nil {
+			return err
+		}
+		defer ra.Close()
+
+		_, err = io.Copy(os.Stdout, content.NewReader(ra))
+		return err
 	},
 }
 
@@ -28,15 +52,10 @@ var contentListCommand = &cli.Command{
 		}
 		defer cancel()
 
-		contents, err := cln.ImageService().List(ctx)
-		if err != nil {
-			return err
-		}
-
-		for _, content := range contents {
-			fmt.Println(content.Name)
-		}
-		return nil
+		return cln.ContentStore().Walk(ctx, func(info content.Info) error {
+			fmt.Println(info.Digest)
+			return nil
+		})
 	},
 }
 
@@ -47,6 +66,35 @@ var contentRemoveCommand = &cli.Command{
 	ArgsUsage: "<digest> [digest...]",
 	Flags:     []cli.Flag{},
 	Action: func(c *cli.Context) error {
+		cln, ctx, cancel, err := NewClient(c)
+		if err != nil {
+			return err
+		}
+		defer cancel()
+
+		var dgsts []digest.Digest
+		for _, arg := range c.Args().Slice() {
+			dgst, err := digest.Parse(arg)
+			if err != nil {
+				return err
+			}
+			dgsts = append(dgsts, dgst)
+		}
+
+		var exitError error
+		for _, dgst := range dgsts {
+			err = cln.ContentStore().Delete(ctx, dgst)
+			if err != nil {
+				if !errdefs.IsNotFound(err) {
+					if exitError == nil {
+						exitError = err
+					}
+				}
+				continue
+			}
+			fmt.Println(dgst)
+		}
+
 		return nil
 	},
 }

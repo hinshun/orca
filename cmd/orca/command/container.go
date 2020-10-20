@@ -1,7 +1,6 @@
 package command
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"log"
@@ -14,10 +13,8 @@ import (
 	"github.com/containerd/containerd/cmd/ctr/commands"
 	"github.com/containerd/containerd/cmd/ctr/commands/tasks"
 	"github.com/containerd/containerd/errdefs"
-	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/oci"
 	"github.com/containerd/containerd/platforms"
-	"github.com/containerd/containerd/remotes"
 	"github.com/hinshun/orca/contentd"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/pkg/errors"
@@ -42,10 +39,11 @@ var containerExecCommand = &cli.Command{
 	},
 	Action: func(c *cli.Context) error {
 		var (
-			id     = c.Args().First()
-			args   = c.Args().Tail()
-			tty    = c.Bool("tty")
-			detach = c.Bool("detach")
+			id       = c.Args().First()
+			args     = c.Args().Tail()
+			tty      = c.Bool("tty")
+			detach   = c.Bool("detach")
+			rootless = c.Bool("rootless")
 		)
 
 		cln, ctx, cancel, err := NewClient(c)
@@ -82,10 +80,12 @@ var containerExecCommand = &cli.Command{
 
 		cioOpts := []cio.Opt{
 			cio.WithStreams(stdinC, os.Stdout, os.Stderr),
-			cio.WithFIFODir("/tmp/fifo-dir"),
 		}
 		if tty {
 			cioOpts = append(cioOpts, cio.WithTerminal)
+		}
+		if rootless {
+			cioOpts = append(cioOpts, cio.WithFIFODir("/tmp/orca/fifo-dir"))
 		}
 		ioCreator = cio.NewCreator(cioOpts...)
 
@@ -262,12 +262,13 @@ var containerRunCommand = &cli.Command{
 		}
 
 		var (
-			ref    = c.Args().First()
-			args   = c.Args().Tail()
-			rm     = c.Bool("rm")
-			tty    = c.Bool("tty")
-			detach = c.Bool("detach")
-			id     = c.String("name")
+			ref      = c.Args().First()
+			args     = c.Args().Tail()
+			rm       = c.Bool("rm")
+			tty      = c.Bool("tty")
+			detach   = c.Bool("detach")
+			rootless = c.Bool("rootless")
+			id       = c.String("name")
 		)
 
 		if id == "" {
@@ -321,10 +322,12 @@ var containerRunCommand = &cli.Command{
 			oci.WithDefaultSpec(),
 			oci.WithDefaultUnixDevices,
 			oci.WithImageConfigArgs(img, args),
-			oci.WithCgroup(""),
 		)
 		if tty {
 			opts = append(opts, oci.WithTTY)
+		}
+		if rootless {
+			opts = append(opts, oci.WithCgroup(""))
 		}
 
 		cOpts = append(cOpts,
@@ -355,11 +358,12 @@ var containerRunCommand = &cli.Command{
 			}
 		}
 
-		var (
-			ioOpts = []cio.Opt{cio.WithFIFODir("/tmp/fifo-dir")}
-		)
+		var cioOpts []cio.Opt
+		if rootless {
+			cioOpts = append(cioOpts, cio.WithFIFODir("/tmp/orca/fifo-dir"))
+		}
 
-		task, err := tasks.NewTask(ctx, cln, container, "", con, false, "", ioOpts)
+		task, err := tasks.NewTask(ctx, cln, container, "", con, false, "", cioOpts)
 		if err != nil {
 			return errors.Wrap(err, "failed to create task")
 		}
@@ -407,70 +411,6 @@ var containerRunCommand = &cli.Command{
 		}
 		return nil
 	},
-}
-
-func PullImage(ctx context.Context, contentdCln *contentd.Client, containerdCln *containerd.Client, ref string) (img images.Image, err error) {
-	var (
-		store    = containerdCln.ContentStore()
-		resolver = contentdCln.Resolver()
-	)
-
-	name, desc, err := resolver.Resolve(ctx, ref)
-	if err != nil {
-		return
-	}
-
-	fetcher, err := resolver.Fetcher(ctx, name)
-	if err != nil {
-		return
-	}
-
-	// Get all the children for a descriptor
-	childrenHandler := images.ChildrenHandler(store)
-
-	// Set any children labels for that content
-	childrenHandler = images.SetChildrenMappedLabels(store, childrenHandler, nil)
-
-	// Filter children by platforms if specified.
-	childrenHandler = images.FilterPlatforms(childrenHandler, platforms.Default())
-
-	handlers := []images.Handler{
-		remotes.FetchHandler(store, fetcher),
-		childrenHandler,
-	}
-
-	handler := images.Handlers(handlers...)
-	err = images.Dispatch(ctx, handler, nil, desc)
-	if err != nil {
-		return
-	}
-
-	img = images.Image{
-		Name:   name,
-		Target: desc,
-	}
-
-	is := containerdCln.ImageService()
-	for {
-		created, err := is.Create(ctx, img)
-		if err != nil {
-			if !errdefs.IsAlreadyExists(err) {
-				return img, err
-			}
-
-			updated, err := is.Update(ctx, img)
-			if err != nil {
-				// if image was removed, try create again
-				if errdefs.IsNotFound(err) {
-					continue
-				}
-				return img, err
-			}
-
-			return updated, nil
-		}
-		return created, nil
-	}
 }
 
 type stdinCloser struct {
