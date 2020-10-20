@@ -51,6 +51,7 @@ import (
 	record "github.com/libp2p/go-libp2p-record"
 	tls "github.com/libp2p/go-libp2p-tls"
 	yamux "github.com/libp2p/go-libp2p-yamux"
+	"github.com/libp2p/go-libp2p/p2p/discovery"
 	multihash "github.com/multiformats/go-multihash"
 	"github.com/pkg/errors"
 )
@@ -160,6 +161,13 @@ func New(ctx context.Context, addr, root string) (*Peer, error) {
 		// Provide service for other peers to test reachability.
 		libp2p.EnableNATService(),
 	)
+
+	// Discover peers through multi-cast DNS.
+	mdns, err := discovery.NewMdnsService(ctx, h, 10*time.Second, discovery.ServiceTag)
+	if err != nil {
+		return nil, err
+	}
+	mdns.RegisterNotifee(&discoveryHandler{ctx, h})
 
 	bstore, err := NewBlockstore(ctx, dstore)
 	if err != nil {
